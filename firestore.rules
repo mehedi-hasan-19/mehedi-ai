@@ -1,0 +1,443 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // 1. Global Safety Net (Default Deny)
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // 2. Hardened Global Primitives
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isVerifiedUser() {
+      return isSignedIn() && request.auth.token.email_verified == true;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isOwner(ownerId) {
+      return isSignedIn() && request.auth.uid == ownerId;
+    }
+
+    // 3. Entity Validation Blueprints
+    function isValidUser(data) {
+      return data.keys().hasAll(['ownerId', 'displayName', 'email', 'title', 'bio', 'createdAt', 'updatedAt'])
+        && data.keys().hasOnly(['ownerId', 'displayName', 'email', 'title', 'bio', 'createdAt', 'updatedAt'])
+        && data.ownerId == request.auth.uid
+        && isValidId(data.ownerId)
+        && data.displayName is string && data.displayName.size() >= 1 && data.displayName.size() <= 100
+        && data.email is string && data.email.size() >= 3 && data.email.size() <= 254
+        && data.title is string && data.title.size() <= 120
+        && data.bio is string && data.bio.size() <= 500
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidUserSettings(data) {
+      return data.keys().hasAll(['ownerId', 'language', 'theme', 'defaultModel', 'semiAutonomousLevel', 'voiceEnabled', 'createdAt', 'updatedAt'])
+        && data.keys().hasOnly(['ownerId', 'language', 'theme', 'defaultModel', 'semiAutonomousLevel', 'voiceEnabled', 'createdAt', 'updatedAt'])
+        && data.ownerId == request.auth.uid
+        && isValidId(data.ownerId)
+        && data.language is string && data.language.size() <= 10 && data.language in ['en', 'bn']
+        && data.theme is string && data.theme.size() <= 10 && data.theme in ['dark', 'light']
+        && data.defaultModel is string && data.defaultModel.size() >= 1 && data.defaultModel.size() <= 80
+        && data.semiAutonomousLevel is string && data.semiAutonomousLevel.size() <= 20 && data.semiAutonomousLevel in ['strict', 'balanced', 'proactive']
+        && data.voiceEnabled is bool
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidConversation(data) {
+      return data.keys().hasAll(['ownerId', 'title', 'agentId', 'lastMessagePreview', 'createdAt', 'updatedAt'])
+        && data.keys().hasOnly(['ownerId', 'title', 'agentId', 'lastMessagePreview', 'createdAt', 'updatedAt'])
+        && data.ownerId == request.auth.uid
+        && isValidId(data.ownerId)
+        && data.title is string && data.title.size() >= 1 && data.title.size() <= 200
+        && data.agentId is string && data.agentId.size() >= 1 && data.agentId.size() <= 64 && data.agentId.matches('^[a-zA-Z0-9_\\-]+$')
+        && data.lastMessagePreview is string && data.lastMessagePreview.size() <= 500
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidMessage(data) {
+      return data.keys().hasAll(['ownerId', 'conversationId', 'role', 'agentId', 'content', 'createdAt'])
+        && data.keys().hasOnly(['ownerId', 'conversationId', 'role', 'agentId', 'content', 'createdAt'])
+        && data.ownerId == request.auth.uid
+        && isValidId(data.ownerId)
+        && isValidId(data.conversationId)
+        && data.role is string && data.role.size() <= 20 && data.role in ['user', 'assistant', 'system']
+        && data.agentId is string && data.agentId.size() >= 1 && data.agentId.size() <= 64 && data.agentId.matches('^[a-zA-Z0-9_\\-]+$')
+        && data.content is string && data.content.size() >= 1 && data.content.size() <= 20000
+        && data.createdAt is timestamp;
+    }
+
+    function isValidAgentConfig(data) {
+      return data.keys().hasAll(['ownerId', 'agentKey', 'name', 'role', 'description', 'systemInstruction', 'enabled', 'tasksCompleted', 'createdAt', 'updatedAt'])
+        && data.keys().hasOnly(['ownerId', 'agentKey', 'name', 'role', 'description', 'systemInstruction', 'enabled', 'tasksCompleted', 'createdAt', 'updatedAt'])
+        && data.ownerId == request.auth.uid
+        && isValidId(data.ownerId)
+        && data.agentKey is string && data.agentKey.size() >= 1 && data.agentKey.size() <= 64 && data.agentKey.matches('^[a-zA-Z0-9_\\-]+$')
+        && data.name is string && data.name.size() >= 1 && data.name.size() <= 100
+        && data.role is string && data.role.size() >= 1 && data.role.size() <= 120
+        && data.description is string && data.description.size() >= 1 && data.description.size() <= 600
+        && data.systemInstruction is string && data.systemInstruction.size() >= 1 && data.systemInstruction.size() <= 4000
+        && data.enabled is bool
+        && data.tasksCompleted is number && data.tasksCompleted >= 0
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidTask(data) {
+      return data.keys().hasAll(['ownerId', 'title', 'description', 'agentId', 'priority', 'status', 'progress', 'dueDate', 'resultSummary', 'subtasks', 'createdAt', 'updatedAt'])
+        && data.keys().hasOnly(['ownerId', 'title', 'description', 'agentId', 'priority', 'status', 'progress', 'dueDate', 'resultSummary', 'subtasks', 'createdAt', 'updatedAt'])
+        && data.ownerId == request.auth.uid
+        && isValidId(data.ownerId)
+        && data.title is string && data.title.size() >= 1 && data.title.size() <= 200
+        && data.description is string && data.description.size() <= 4000
+        && data.agentId is string && data.agentId.size() >= 1 && data.agentId.size() <= 64 && data.agentId.matches('^[a-zA-Z0-9_\\-]+$')
+        && data.priority is string && data.priority.size() <= 20 && data.priority in ['low', 'medium', 'high', 'critical']
+        && data.status is string && data.status.size() <= 30 && data.status in ['planning', 'waiting', 'running', 'completed', 'failed', 'approval_required']
+        && data.progress is number && data.progress >= 0 && data.progress <= 100
+        && data.dueDate is string && data.dueDate.size() <= 40
+        && data.resultSummary is string && data.resultSummary.size() <= 15000
+        && data.subtasks is list && data.subtasks.size() <= 20
+        && (data.subtasks.size() == 0 || (data.subtasks[0] is string && data.subtasks[0].size() <= 300))
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidApproval(data) {
+      return data.keys().hasAll(['ownerId', 'actionTitle', 'actionType', 'agentId', 'reason', 'targetService', 'payloadData', 'consequences', 'status', 'resolutionNote', 'createdAt', 'updatedAt'])
+        && data.keys().hasOnly(['ownerId', 'actionTitle', 'actionType', 'agentId', 'reason', 'targetService', 'payloadData', 'consequences', 'status', 'resolutionNote', 'createdAt', 'updatedAt'])
+        && data.ownerId == request.auth.uid
+        && isValidId(data.ownerId)
+        && data.actionTitle is string && data.actionTitle.size() >= 1 && data.actionTitle.size() <= 200
+        && data.actionType is string && data.actionType.size() <= 40 && data.actionType in ['send_email', 'publish_post', 'delete_file', 'trigger_webhook', 'external_api', 'account_change']
+        && data.agentId is string && data.agentId.size() >= 1 && data.agentId.size() <= 64 && data.agentId.matches('^[a-zA-Z0-9_\\-]+$')
+        && data.reason is string && data.reason.size() >= 1 && data.reason.size() <= 1000
+        && data.targetService is string && data.targetService.size() >= 1 && data.targetService.size() <= 200
+        && data.payloadData is string && data.payloadData.size() >= 1 && data.payloadData.size() <= 8000
+        && data.consequences is string && data.consequences.size() >= 1 && data.consequences.size() <= 1000
+        && data.status is string && data.status.size() <= 20 && data.status in ['pending', 'approved', 'rejected']
+        && data.resolutionNote is string && data.resolutionNote.size() <= 1000
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidMemory(data) {
+      return data.keys().hasAll(['ownerId', 'title', 'category', 'content', 'tags', 'createdAt', 'updatedAt'])
+        && data.keys().hasOnly(['ownerId', 'title', 'category', 'content', 'tags', 'createdAt', 'updatedAt'])
+        && data.ownerId == request.auth.uid
+        && isValidId(data.ownerId)
+        && data.title is string && data.title.size() >= 1 && data.title.size() <= 200
+        && data.category is string && data.category.size() <= 30 && data.category in ['preference', 'project', 'conversation', 'note', 'knowledge']
+        && data.content is string && data.content.size() >= 1 && data.content.size() <= 8000
+        && data.tags is list && data.tags.size() <= 10
+        && (data.tags.size() == 0 || (data.tags[0] is string && data.tags[0].size() <= 50))
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidWorkflow(data) {
+      return data.keys().hasAll(['ownerId', 'name', 'description', 'triggerType', 'targetEndpoint', 'status', 'lastRunResult', 'runCount', 'createdAt', 'updatedAt'])
+        && data.keys().hasOnly(['ownerId', 'name', 'description', 'triggerType', 'targetEndpoint', 'status', 'lastRunResult', 'runCount', 'createdAt', 'updatedAt'])
+        && data.ownerId == request.auth.uid
+        && isValidId(data.ownerId)
+        && data.name is string && data.name.size() >= 1 && data.name.size() <= 150
+        && data.description is string && data.description.size() >= 1 && data.description.size() <= 1000
+        && data.triggerType is string && data.triggerType.size() <= 30 && data.triggerType in ['manual', 'schedule', 'event', 'webhook']
+        && data.targetEndpoint is string && data.targetEndpoint.size() <= 500
+        && data.status is string && data.status.size() <= 30 && data.status in ['configured', 'draft', 'error']
+        && data.lastRunResult is string && data.lastRunResult.size() <= 2000
+        && data.runCount is number && data.runCount >= 0
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidIntegration(data) {
+      return data.keys().hasAll(['ownerId', 'providerKey', 'name', 'status', 'endpointHint', 'scopesSummary', 'createdAt', 'updatedAt'])
+        && data.keys().hasOnly(['ownerId', 'providerKey', 'name', 'status', 'endpointHint', 'scopesSummary', 'createdAt', 'updatedAt'])
+        && data.ownerId == request.auth.uid
+        && isValidId(data.ownerId)
+        && data.providerKey is string && data.providerKey.size() >= 1 && data.providerKey.size() <= 64 && data.providerKey.matches('^[a-zA-Z0-9_\\-]+$')
+        && data.name is string && data.name.size() >= 1 && data.name.size() <= 100
+        && data.status is string && data.status.size() <= 30 && data.status in ['connected', 'disconnected', 'error']
+        && data.endpointHint is string && data.endpointHint.size() <= 300
+        && data.scopesSummary is string && data.scopesSummary.size() <= 500
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidFileRecord(data) {
+      return data.keys().hasAll(['ownerId', 'name', 'folder', 'mimeType', 'sizeBytes', 'textContent', 'aiSummary', 'createdAt', 'updatedAt'])
+        && data.keys().hasOnly(['ownerId', 'name', 'folder', 'mimeType', 'sizeBytes', 'textContent', 'aiSummary', 'createdAt', 'updatedAt'])
+        && data.ownerId == request.auth.uid
+        && isValidId(data.ownerId)
+        && data.name is string && data.name.size() >= 1 && data.name.size() <= 200
+        && data.folder is string && data.folder.size() >= 1 && data.folder.size() <= 100
+        && data.mimeType is string && data.mimeType.size() >= 1 && data.mimeType.size() <= 100
+        && data.sizeBytes is number && data.sizeBytes >= 0 && data.sizeBytes <= 10485760
+        && data.textContent is string && data.textContent.size() <= 25000
+        && data.aiSummary is string && data.aiSummary.size() <= 8000
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidActivityLog(data) {
+      return data.keys().hasAll(['ownerId', 'category', 'action', 'agentId', 'status', 'details', 'createdAt'])
+        && data.keys().hasOnly(['ownerId', 'category', 'action', 'agentId', 'status', 'details', 'createdAt'])
+        && data.ownerId == request.auth.uid
+        && isValidId(data.ownerId)
+        && data.category is string && data.category.size() <= 30 && data.category in ['agent', 'task', 'approval', 'workflow', 'security', 'memory', 'file']
+        && data.action is string && data.action.size() >= 1 && data.action.size() <= 200
+        && data.agentId is string && data.agentId.size() >= 1 && data.agentId.size() <= 64 && data.agentId.matches('^[a-zA-Z0-9_\\-]+$')
+        && data.status is string && data.status.size() <= 20 && data.status in ['success', 'warning', 'error', 'info']
+        && data.details is string && data.details.size() <= 2000
+        && data.createdAt is timestamp;
+    }
+
+    // 4. Collection Match Blocks
+    match /users/{userId} {
+      allow get: if isSignedIn() && isValidId(userId) && userId == request.auth.uid && isOwner(existing().ownerId);
+      allow create: if isVerifiedUser()
+        && isValidId(userId)
+        && userId == request.auth.uid
+        && isValidUser(incoming())
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time;
+      allow update: if isVerifiedUser()
+        && isValidId(userId)
+        && userId == request.auth.uid
+        && isValidUser(incoming())
+        && isOwner(existing().ownerId)
+        && incoming().ownerId == existing().ownerId
+        && incoming().email == existing().email
+        && incoming().createdAt == existing().createdAt
+        && incoming().updatedAt == request.time
+        && incoming().diff(existing()).affectedKeys().hasOnly(['displayName', 'title', 'bio', 'updatedAt']);
+      allow delete: if false;
+    }
+
+    match /userSettings/{userId} {
+      allow get: if isSignedIn() && isValidId(userId) && userId == request.auth.uid && isOwner(existing().ownerId);
+      allow create: if isVerifiedUser()
+        && isValidId(userId)
+        && userId == request.auth.uid
+        && isValidUserSettings(incoming())
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time;
+      allow update: if isVerifiedUser()
+        && isValidId(userId)
+        && userId == request.auth.uid
+        && isValidUserSettings(incoming())
+        && isOwner(existing().ownerId)
+        && incoming().ownerId == existing().ownerId
+        && incoming().createdAt == existing().createdAt
+        && incoming().updatedAt == request.time
+        && incoming().diff(existing()).affectedKeys().hasOnly(['language', 'theme', 'defaultModel', 'semiAutonomousLevel', 'voiceEnabled', 'updatedAt']);
+      allow delete: if false;
+    }
+
+    match /conversations/{conversationId} {
+      allow get: if isSignedIn() && isValidId(conversationId) && isOwner(existing().ownerId);
+      allow list: if isSignedIn() && existing().ownerId == request.auth.uid;
+      allow create: if isVerifiedUser()
+        && isValidId(conversationId)
+        && isValidConversation(incoming())
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time;
+      allow update: if isVerifiedUser()
+        && isValidId(conversationId)
+        && isValidConversation(incoming())
+        && isOwner(existing().ownerId)
+        && incoming().ownerId == existing().ownerId
+        && incoming().createdAt == existing().createdAt
+        && incoming().updatedAt == request.time
+        && incoming().diff(existing()).affectedKeys().hasOnly(['title', 'agentId', 'lastMessagePreview', 'updatedAt']);
+      allow delete: if isVerifiedUser() && isValidId(conversationId) && isOwner(existing().ownerId);
+    }
+
+    match /messages/{messageId} {
+      allow get: if isSignedIn() && isValidId(messageId) && isOwner(existing().ownerId);
+      allow list: if isSignedIn() && existing().ownerId == request.auth.uid;
+      allow create: if isVerifiedUser()
+        && isValidId(messageId)
+        && isValidMessage(incoming())
+        && incoming().createdAt == request.time
+        && exists(/databases/$(database)/documents/conversations/$(incoming().conversationId))
+        && get(/databases/$(database)/documents/conversations/$(incoming().conversationId)).data.ownerId == request.auth.uid;
+      allow update: if false;
+      allow delete: if isVerifiedUser() && isValidId(messageId) && isOwner(existing().ownerId);
+    }
+
+    match /agents/{agentId} {
+      allow get: if isSignedIn() && isValidId(agentId) && isOwner(existing().ownerId);
+      allow list: if isSignedIn() && existing().ownerId == request.auth.uid;
+      allow create: if isVerifiedUser()
+        && isValidId(agentId)
+        && isValidAgentConfig(incoming())
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time;
+      allow update: if isVerifiedUser()
+        && isValidId(agentId)
+        && isValidAgentConfig(incoming())
+        && isOwner(existing().ownerId)
+        && incoming().ownerId == existing().ownerId
+        && incoming().agentKey == existing().agentKey
+        && incoming().createdAt == existing().createdAt
+        && incoming().updatedAt == request.time
+        && incoming().diff(existing()).affectedKeys().hasOnly(['name', 'role', 'description', 'systemInstruction', 'enabled', 'tasksCompleted', 'updatedAt']);
+      allow delete: if isVerifiedUser() && isValidId(agentId) && isOwner(existing().ownerId);
+    }
+
+    match /tasks/{taskId} {
+      allow get: if isSignedIn() && isValidId(taskId) && isOwner(existing().ownerId);
+      allow list: if isSignedIn() && existing().ownerId == request.auth.uid;
+      allow create: if isVerifiedUser()
+        && isValidId(taskId)
+        && isValidTask(incoming())
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time;
+      allow update: if isVerifiedUser()
+        && isValidId(taskId)
+        && isValidTask(incoming())
+        && isOwner(existing().ownerId)
+        && incoming().ownerId == existing().ownerId
+        && incoming().createdAt == existing().createdAt
+        && incoming().updatedAt == request.time
+        && incoming().diff(existing()).affectedKeys().hasOnly(['title', 'description', 'agentId', 'priority', 'status', 'progress', 'dueDate', 'resultSummary', 'subtasks', 'updatedAt']);
+      allow delete: if isVerifiedUser() && isValidId(taskId) && isOwner(existing().ownerId);
+    }
+
+    match /approvals/{approvalId} {
+      allow get: if isSignedIn() && isValidId(approvalId) && isOwner(existing().ownerId);
+      allow list: if isSignedIn() && existing().ownerId == request.auth.uid;
+      allow create: if isVerifiedUser()
+        && isValidId(approvalId)
+        && isValidApproval(incoming())
+        && incoming().status == 'pending'
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time;
+      allow update: if isVerifiedUser()
+        && isValidId(approvalId)
+        && isValidApproval(incoming())
+        && isOwner(existing().ownerId)
+        && existing().status == 'pending'
+        && incoming().ownerId == existing().ownerId
+        && incoming().actionTitle == existing().actionTitle
+        && incoming().actionType == existing().actionType
+        && incoming().agentId == existing().agentId
+        && incoming().reason == existing().reason
+        && incoming().targetService == existing().targetService
+        && incoming().payloadData == existing().payloadData
+        && incoming().consequences == existing().consequences
+        && incoming().createdAt == existing().createdAt
+        && incoming().updatedAt == request.time
+        && incoming().status in ['approved', 'rejected']
+        && incoming().diff(existing()).affectedKeys().hasOnly(['status', 'resolutionNote', 'updatedAt']);
+      allow delete: if isVerifiedUser() && isValidId(approvalId) && isOwner(existing().ownerId);
+    }
+
+    match /memories/{memoryId} {
+      allow get: if isSignedIn() && isValidId(memoryId) && isOwner(existing().ownerId);
+      allow list: if isSignedIn() && existing().ownerId == request.auth.uid;
+      allow create: if isVerifiedUser()
+        && isValidId(memoryId)
+        && isValidMemory(incoming())
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time;
+      allow update: if isVerifiedUser()
+        && isValidId(memoryId)
+        && isValidMemory(incoming())
+        && isOwner(existing().ownerId)
+        && incoming().ownerId == existing().ownerId
+        && incoming().createdAt == existing().createdAt
+        && incoming().updatedAt == request.time
+        && incoming().diff(existing()).affectedKeys().hasOnly(['title', 'category', 'content', 'tags', 'updatedAt']);
+      allow delete: if isVerifiedUser() && isValidId(memoryId) && isOwner(existing().ownerId);
+    }
+
+    match /workflows/{workflowId} {
+      allow get: if isSignedIn() && isValidId(workflowId) && isOwner(existing().ownerId);
+      allow list: if isSignedIn() && existing().ownerId == request.auth.uid;
+      allow create: if isVerifiedUser()
+        && isValidId(workflowId)
+        && isValidWorkflow(incoming())
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time;
+      allow update: if isVerifiedUser()
+        && isValidId(workflowId)
+        && isValidWorkflow(incoming())
+        && isOwner(existing().ownerId)
+        && incoming().ownerId == existing().ownerId
+        && incoming().createdAt == existing().createdAt
+        && incoming().updatedAt == request.time
+        && incoming().diff(existing()).affectedKeys().hasOnly(['name', 'description', 'triggerType', 'targetEndpoint', 'status', 'lastRunResult', 'runCount', 'updatedAt']);
+      allow delete: if isVerifiedUser() && isValidId(workflowId) && isOwner(existing().ownerId);
+    }
+
+    match /integrations/{integrationId} {
+      allow get: if isSignedIn() && isValidId(integrationId) && isOwner(existing().ownerId);
+      allow list: if isSignedIn() && existing().ownerId == request.auth.uid;
+      allow create: if isVerifiedUser()
+        && isValidId(integrationId)
+        && isValidIntegration(incoming())
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time;
+      allow update: if isVerifiedUser()
+        && isValidId(integrationId)
+        && isValidIntegration(incoming())
+        && isOwner(existing().ownerId)
+        && incoming().ownerId == existing().ownerId
+        && incoming().providerKey == existing().providerKey
+        && incoming().createdAt == existing().createdAt
+        && incoming().updatedAt == request.time
+        && incoming().diff(existing()).affectedKeys().hasOnly(['name', 'status', 'endpointHint', 'scopesSummary', 'updatedAt']);
+      allow delete: if isVerifiedUser() && isValidId(integrationId) && isOwner(existing().ownerId);
+    }
+
+    match /files/{fileId} {
+      allow get: if isSignedIn() && isValidId(fileId) && isOwner(existing().ownerId);
+      allow list: if isSignedIn() && existing().ownerId == request.auth.uid;
+      allow create: if isVerifiedUser()
+        && isValidId(fileId)
+        && isValidFileRecord(incoming())
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time;
+      allow update: if isVerifiedUser()
+        && isValidId(fileId)
+        && isValidFileRecord(incoming())
+        && isOwner(existing().ownerId)
+        && incoming().ownerId == existing().ownerId
+        && incoming().mimeType == existing().mimeType
+        && incoming().sizeBytes == existing().sizeBytes
+        && incoming().createdAt == existing().createdAt
+        && incoming().updatedAt == request.time
+        && incoming().diff(existing()).affectedKeys().hasOnly(['name', 'folder', 'textContent', 'aiSummary', 'updatedAt']);
+      allow delete: if isVerifiedUser() && isValidId(fileId) && isOwner(existing().ownerId);
+    }
+
+    match /activityLogs/{logId} {
+      allow get: if isSignedIn() && isValidId(logId) && isOwner(existing().ownerId);
+      allow list: if isSignedIn() && existing().ownerId == request.auth.uid;
+      allow create: if isVerifiedUser()
+        && isValidId(logId)
+        && isValidActivityLog(incoming())
+        && incoming().createdAt == request.time;
+      allow update, delete: if false;
+    }
+  }
+}

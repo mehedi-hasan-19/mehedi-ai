@@ -1,0 +1,252 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "Private user account profile isolated to the authenticated owner.",
+      "type": "object",
+      "properties": {
+        "ownerId": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "displayName": { "type": "string", "minLength": 1, "maxLength": 100 },
+        "email": { "type": "string", "minLength": 3, "maxLength": 254 },
+        "title": { "type": "string", "maxLength": 120 },
+        "bio": { "type": "string", "maxLength": 500 },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["ownerId", "displayName", "email", "title", "bio", "createdAt", "updatedAt"]
+    },
+    "UserSettings": {
+      "title": "UserSettings",
+      "description": "User workspace, language, theme, and AI operating system preferences.",
+      "type": "object",
+      "properties": {
+        "ownerId": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "language": { "type": "string", "enum": ["en", "bn"], "maxLength": 10 },
+        "theme": { "type": "string", "enum": ["dark", "light"], "maxLength": 10 },
+        "defaultModel": { "type": "string", "maxLength": 80 },
+        "semiAutonomousLevel": { "type": "string", "enum": ["strict", "balanced", "proactive"], "maxLength": 20 },
+        "voiceEnabled": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["ownerId", "language", "theme", "defaultModel", "semiAutonomousLevel", "voiceEnabled", "createdAt", "updatedAt"]
+    },
+    "Conversation": {
+      "title": "Conversation",
+      "description": "A user-owned AI chat conversation thread.",
+      "type": "object",
+      "properties": {
+        "ownerId": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "title": { "type": "string", "minLength": 1, "maxLength": 200 },
+        "agentId": { "type": "string", "maxLength": 64, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "lastMessagePreview": { "type": "string", "maxLength": 500 },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["ownerId", "title", "agentId", "lastMessagePreview", "createdAt", "updatedAt"]
+    },
+    "Message": {
+      "title": "Message",
+      "description": "An individual message inside a user conversation.",
+      "type": "object",
+      "properties": {
+        "ownerId": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "conversationId": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "role": { "type": "string", "enum": ["user", "assistant", "system"], "maxLength": 20 },
+        "agentId": { "type": "string", "maxLength": 64, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "content": { "type": "string", "minLength": 1, "maxLength": 20000 },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["ownerId", "conversationId", "role", "agentId", "content", "createdAt"]
+    },
+    "AgentConfig": {
+      "title": "AgentConfig",
+      "description": "Custom or configured specialist AI agent record.",
+      "type": "object",
+      "properties": {
+        "ownerId": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "agentKey": { "type": "string", "maxLength": 64, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "name": { "type": "string", "minLength": 1, "maxLength": 100 },
+        "role": { "type": "string", "minLength": 1, "maxLength": 120 },
+        "description": { "type": "string", "minLength": 1, "maxLength": 600 },
+        "systemInstruction": { "type": "string", "minLength": 1, "maxLength": 4000 },
+        "enabled": { "type": "boolean" },
+        "tasksCompleted": { "type": "number" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["ownerId", "agentKey", "name", "role", "description", "systemInstruction", "enabled", "tasksCompleted", "createdAt", "updatedAt"]
+    },
+    "Task": {
+      "title": "Task",
+      "description": "An orchestrated or manual task assigned to a specialist AI agent.",
+      "type": "object",
+      "properties": {
+        "ownerId": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "title": { "type": "string", "minLength": 1, "maxLength": 200 },
+        "description": { "type": "string", "maxLength": 4000 },
+        "agentId": { "type": "string", "maxLength": 64, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "priority": { "type": "string", "enum": ["low", "medium", "high", "critical"], "maxLength": 20 },
+        "status": { "type": "string", "enum": ["planning", "waiting", "running", "completed", "failed", "approval_required"], "maxLength": 30 },
+        "progress": { "type": "number" },
+        "dueDate": { "type": "string", "maxLength": 40 },
+        "resultSummary": { "type": "string", "maxLength": 15000 },
+        "subtasks": { "type": "array", "maxLength": 20 },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["ownerId", "title", "description", "agentId", "priority", "status", "progress", "dueDate", "resultSummary", "subtasks", "createdAt", "updatedAt"]
+    },
+    "Approval": {
+      "title": "Approval",
+      "description": "Human-in-the-loop approval request for consequential external actions.",
+      "type": "object",
+      "properties": {
+        "ownerId": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "actionTitle": { "type": "string", "minLength": 1, "maxLength": 200 },
+        "actionType": { "type": "string", "enum": ["send_email", "publish_post", "delete_file", "trigger_webhook", "external_api", "account_change"], "maxLength": 40 },
+        "agentId": { "type": "string", "maxLength": 64, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "reason": { "type": "string", "minLength": 1, "maxLength": 1000 },
+        "targetService": { "type": "string", "minLength": 1, "maxLength": 200 },
+        "payloadData": { "type": "string", "minLength": 1, "maxLength": 8000 },
+        "consequences": { "type": "string", "minLength": 1, "maxLength": 1000 },
+        "status": { "type": "string", "enum": ["pending", "approved", "rejected"], "maxLength": 20 },
+        "resolutionNote": { "type": "string", "maxLength": 1000 },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["ownerId", "actionTitle", "actionType", "agentId", "reason", "targetService", "payloadData", "consequences", "status", "resolutionNote", "createdAt", "updatedAt"]
+    },
+    "Memory": {
+      "title": "Memory",
+      "description": "User-controlled persistent AI memory and knowledge record.",
+      "type": "object",
+      "properties": {
+        "ownerId": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "title": { "type": "string", "minLength": 1, "maxLength": 200 },
+        "category": { "type": "string", "enum": ["preference", "project", "conversation", "note", "knowledge"], "maxLength": 30 },
+        "content": { "type": "string", "minLength": 1, "maxLength": 8000 },
+        "tags": { "type": "array", "maxLength": 10 },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["ownerId", "title", "category", "content", "tags", "createdAt", "updatedAt"]
+    },
+    "Workflow": {
+      "title": "Workflow",
+      "description": "Configured n8n or API automation workflow definition.",
+      "type": "object",
+      "properties": {
+        "ownerId": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "name": { "type": "string", "minLength": 1, "maxLength": 150 },
+        "description": { "type": "string", "minLength": 1, "maxLength": 1000 },
+        "triggerType": { "type": "string", "enum": ["manual", "schedule", "event", "webhook"], "maxLength": 30 },
+        "targetEndpoint": { "type": "string", "maxLength": 500 },
+        "status": { "type": "string", "enum": ["configured", "draft", "error"], "maxLength": 30 },
+        "lastRunResult": { "type": "string", "maxLength": 2000 },
+        "runCount": { "type": "number" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["ownerId", "name", "description", "triggerType", "targetEndpoint", "status", "lastRunResult", "runCount", "createdAt", "updatedAt"]
+    },
+    "Integration": {
+      "title": "Integration",
+      "description": "External service integration status and metadata.",
+      "type": "object",
+      "properties": {
+        "ownerId": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "providerKey": { "type": "string", "maxLength": 64, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "name": { "type": "string", "minLength": 1, "maxLength": 100 },
+        "status": { "type": "string", "enum": ["connected", "disconnected", "error"], "maxLength": 30 },
+        "endpointHint": { "type": "string", "maxLength": 300 },
+        "scopesSummary": { "type": "string", "maxLength": 500 },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["ownerId", "providerKey", "name", "status", "endpointHint", "scopesSummary", "createdAt", "updatedAt"]
+    },
+    "FileRecord": {
+      "title": "FileRecord",
+      "description": "Uploaded file metadata, folder classification, and AI summary.",
+      "type": "object",
+      "properties": {
+        "ownerId": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "name": { "type": "string", "minLength": 1, "maxLength": 200 },
+        "folder": { "type": "string", "minLength": 1, "maxLength": 100 },
+        "mimeType": { "type": "string", "minLength": 1, "maxLength": 100 },
+        "sizeBytes": { "type": "number" },
+        "textContent": { "type": "string", "maxLength": 25000 },
+        "aiSummary": { "type": "string", "maxLength": 8000 },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["ownerId", "name", "folder", "mimeType", "sizeBytes", "textContent", "aiSummary", "createdAt", "updatedAt"]
+    },
+    "ActivityLog": {
+      "title": "ActivityLog",
+      "description": "Immutable security and operational audit log entry.",
+      "type": "object",
+      "properties": {
+        "ownerId": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "category": { "type": "string", "enum": ["agent", "task", "approval", "workflow", "security", "memory", "file"], "maxLength": 30 },
+        "action": { "type": "string", "minLength": 1, "maxLength": 200 },
+        "agentId": { "type": "string", "maxLength": 64, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "status": { "type": "string", "enum": ["success", "warning", "error", "info"], "maxLength": 20 },
+        "details": { "type": "string", "maxLength": 2000 },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["ownerId", "category", "action", "agentId", "status", "details", "createdAt"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": { "$ref": "#/entities/User" },
+      "description": "Private user account profiles."
+    },
+    "/userSettings/{userId}": {
+      "schema": { "$ref": "#/entities/UserSettings" },
+      "description": "User-specific application settings."
+    },
+    "/conversations/{conversationId}": {
+      "schema": { "$ref": "#/entities/Conversation" },
+      "description": "User chat conversation threads."
+    },
+    "/messages/{messageId}": {
+      "schema": { "$ref": "#/entities/Message" },
+      "description": "Individual messages belonging to a conversation."
+    },
+    "/agents/{agentId}": {
+      "schema": { "$ref": "#/entities/AgentConfig" },
+      "description": "Configured specialist AI agents."
+    },
+    "/tasks/{taskId}": {
+      "schema": { "$ref": "#/entities/Task" },
+      "description": "Orchestrated and manual tasks."
+    },
+    "/approvals/{approvalId}": {
+      "schema": { "$ref": "#/entities/Approval" },
+      "description": "Semi-autonomous human approval requests."
+    },
+    "/memories/{memoryId}": {
+      "schema": { "$ref": "#/entities/Memory" },
+      "description": "Persistent user-controlled AI memories."
+    },
+    "/workflows/{workflowId}": {
+      "schema": { "$ref": "#/entities/Workflow" },
+      "description": "n8n and API automation workflows."
+    },
+    "/integrations/{integrationId}": {
+      "schema": { "$ref": "#/entities/Integration" },
+      "description": "External service integration records."
+    },
+    "/files/{fileId}": {
+      "schema": { "$ref": "#/entities/FileRecord" },
+      "description": "Uploaded file metadata and extracted text."
+    },
+    "/activityLogs/{logId}": {
+      "schema": { "$ref": "#/entities/ActivityLog" },
+      "description": "Immutable audit logs of system and agent actions."
+    }
+  }
+}

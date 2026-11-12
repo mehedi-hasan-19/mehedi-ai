@@ -1,0 +1,10 @@
+{
+  "name": "MEHEDI AI — Personal AI Operating System",
+  "description": "A semi-autonomous multi-agent personal AI operating system powered by Google Gemini and Firebase with task orchestration, human-in-the-loop approvals, memory vault, and bilingual English/Bengali support.",
+  "requestFramePermissions": [
+    "microphone"
+  ],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
